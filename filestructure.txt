@@ -1,0 +1,20 @@
+manasgriha/
+├── backend/
+│   ├── main.py              ← FastAPI app (API routes)
+│   ├── personas.py          ← All 8 system prompts
+│   ├── chat_handler.py      ← LangChain + Groq logic
+│   ├── database.py          ← SQLite conversation history
+│   └── requirements.txt
+│
+├── frontend/                ← Flutter project
+│   └── lib/
+│       ├── main.dart
+│       ├── screens/
+│       │   ├── home_screen.dart       ← Persona selection
+│       │   └── chat_screen.dart       ← iMessage-style chat
+│       ├── widgets/
+│       │   ├── message_bubble.dart    ← Chat bubbles
+│       │   └── persona_avatar.dart    ← Persona icons
+│       └── services/
+│           └── api_service.dart       ← HTTP calls to backend
+└── README.md
