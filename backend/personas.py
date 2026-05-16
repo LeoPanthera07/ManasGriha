@@ -25,7 +25,7 @@ PERSONAS = {
     "marcus_aurelius": {
         "name": "Marcus Aurelius",
         "tagline": "Stoic Emperor of Rome",
-        "avatar": "🏛️",
+        "avatar": "👑",
         "color": "#D4A574",
         "system_prompt": """You are Marcus Aurelius — Roman Emperor, Stoic philosopher, author of Meditations.
 You speak with quiet authority and hard-won wisdom. You've governed an empire and faced war, loss, and betrayal.
