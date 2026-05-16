@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ManasGriha — AI Council Group Chat</title>
+  <meta name="description" content="Chat with legendary personas — Marcus Aurelius, Socrates, Goggins, Tesla and more — in a WhatsApp-style group discussion or 1-on-1. Gain clarity through diverse perspectives." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏛️</text></svg>" />
+  <link rel="stylesheet" href="/assets/styles/index.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- ── Sidebar ─────────────────────────────────── -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h1>🏛️ ManasGriha</h1>
+        <p>Council of Legends</p>
+      </div>
+
+      <div class="sidebar-scroll">
+        <!-- Group chat entry -->
+        <div class="sidebar-section-label">Group</div>
+        <div class="persona-item active" id="btn-group-chat" data-mode="group" data-key="group">
+          <div class="persona-avatar" style="background:rgba(124,92,252,0.15)">🏛️</div>
+          <div class="persona-info">
+            <div class="persona-name" style="color:var(--accent)">The Council</div>
+            <div class="persona-tagline">All 8 personas debating together</div>
+          </div>
+        </div>
+
+        <!-- Individual personas -->
+        <div class="sidebar-section-label">Individual</div>
+        <div class="persona-list" id="persona-list">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <button class="btn-settings" id="btn-settings" title="API Key Settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>API Key Settings</span>
+        </button>
+        <div class="key-status" id="key-status">
+          <span class="key-status-dot disconnected" id="key-dot"></span>
+          <span id="key-label">No API key set</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ── Chat Area ──────────────────────────────── -->
+    <main class="chat-area">
+      <header class="chat-header">
+        <div class="chat-header-left">
+          <button class="btn-menu" id="btn-menu" title="Toggle sidebar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          <div class="chat-header-avatar" id="chat-header-avatar" style="background:rgba(124,92,252,0.15)">🏛️</div>
+          <div>
+            <div class="chat-title" id="chat-title">The Council</div>
+            <div class="chat-subtitle" id="chat-subtitle">8 personas online</div>
+          </div>
+        </div>
+        <div class="chat-header-right">
+          <button class="btn-icon" id="btn-new-chat" title="New conversation">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Messages go here (or welcome screen) -->
+      <div class="messages-container" id="messages-container">
+        <div class="welcome-screen" id="welcome-screen">
+          <div class="welcome-icon">🏛️</div>
+          <h2>Welcome to The Council</h2>
+          <p>Send a message and all 8 legendary personas will share their perspectives, debate each other, and help you think clearly.</p>
+          <div class="welcome-personas" id="welcome-personas">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Reply preview bar + Input -->
+      <div class="input-area">
+        <div class="reply-preview" id="reply-preview">
+          <div class="reply-preview-content">
+            <div class="reply-author" id="reply-author"></div>
+            <div class="reply-text" id="reply-text"></div>
+          </div>
+          <button class="btn-close-reply" id="btn-close-reply" title="Cancel reply">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="input-wrapper">
+          <textarea id="message-input" rows="1" placeholder="Message the council..." autocomplete="off"></textarea>
+          <button class="btn-send" id="btn-send" title="Send message">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ── API Key Modal ──────────────────────────── -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal">
+      <h2>🔑 Enter Your Groq API Key</h2>
+      <p>ManasGriha uses Groq's lightning-fast inference. Get a free key at <a href="https://console.groq.com/keys" target="_blank" style="color:var(--accent);text-decoration:underline">console.groq.com</a></p>
+      <div class="modal-input-group">
+        <label for="api-key-input">API Key</label>
+        <input type="password" id="api-key-input" placeholder="gsk_..." autocomplete="off" />
+        <div class="modal-error" id="modal-error">Please enter a valid API key</div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-modal secondary" id="btn-modal-cancel">Cancel</button>
+        <button class="btn-modal primary" id="btn-modal-save">Save Key</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Toast ──────────────────────────────────── -->
+  <div class="toast" id="toast"></div>
+
+  <script src="/assets/js/app.js" type="module"></script>
+</body>
+</html>
