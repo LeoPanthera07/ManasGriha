@@ -46,6 +46,7 @@ const dom = {
   replyText:         $('#reply-text'),
   btnCloseReply:     $('#btn-close-reply'),
   toast:             $('#toast'),
+  app:               $('#app'),
 };
 
 const API = '/api';
@@ -137,6 +138,7 @@ function switchChat(mode, loadHist = true) {
 
   // Close mobile sidebar
   dom.sidebar.classList.remove('open');
+  dom.app.classList.remove('sidebar-open');
 }
 
 function updateChatHeader() {
@@ -676,10 +678,15 @@ function bindEvents() {
   dom.messageInput.addEventListener('input', () => { autoResizeInput(); updateSendButton(); });
 
   // Sidebar toggle (mobile)
-  dom.btnMenu.addEventListener('click', () => dom.sidebar.classList.toggle('open'));
+  dom.btnMenu.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = dom.sidebar.classList.toggle('open');
+    dom.app.classList.toggle('sidebar-open', isOpen);
+  });
   document.addEventListener('click', (e) => {
-    if (dom.sidebar.classList.contains('open') && !dom.sidebar.contains(e.target) && e.target !== dom.btnMenu) {
+    if (dom.sidebar.classList.contains('open') && !dom.sidebar.contains(e.target)) {
       dom.sidebar.classList.remove('open');
+      dom.app.classList.remove('sidebar-open');
     }
   });
 
