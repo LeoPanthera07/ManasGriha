@@ -1,5 +1,6 @@
 import asyncio
 import random
+import re
 from langchain_groq import ChatGroq
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from personas import PERSONAS
@@ -12,6 +13,54 @@ def _build_llm(api_key: str) -> ChatGroq:
         temperature=0.85,
         api_key=api_key,
     )
+
+
+def _clean_response(text: str, persona_name: str) -> str:
+    """Strip LLM artifacts that leak prompt structure into the visible message."""
+
+    # Remove "[PersonaName]:" or "[PersonaName] :" prefix (the LLM echoing its own name)
+    for p in PERSONAS.values():
+        text = re.sub(
+            rf'^\s*\[?\s*{re.escape(p["name"])}\s*\]?\s*:\s*',
+            '', text, count=1, flags=re.IGNORECASE
+        )
+
+    # Remove "Responding to X:" / "Replying to X:" / "In response to X:" prefixes
+    text = re.sub(
+        r'^(Responding|Replying|In response)\s+to\s+[\w\s]+?:\s*',
+        '', text, count=1, flags=re.IGNORECASE
+    )
+
+    # Remove meta-commentary the LLM sometimes adds
+    noise_patterns = [
+        r'No more responses? needed\.?',
+        r'I\'ll keep it brief\.?',
+        r'Here\'s my (?:brief )?(?:take|response|thought)[:.]?\s*',
+        r'Let me (?:briefly )?respond[:.]?\s*',
+    ]
+    for pat in noise_patterns:
+        text = re.sub(pat, '', text, flags=re.IGNORECASE)
+
+    return text.strip()
+
+
+def _detect_reply_target(reply_text: str, own_key: str) -> str | None:
+    """Scan the reply text to find which persona is being referenced.
+    Returns the persona key most likely being replied to, or None."""
+    mentioned = []
+    lower = reply_text.lower()
+    for key, persona in PERSONAS.items():
+        if key == own_key:
+            continue
+        # Check for name mention (case-insensitive)
+        if persona["name"].lower() in lower:
+            mentioned.append(key)
+        # Also check first name only (e.g. "Marcus" for "Marcus Aurelius")
+        first_name = persona["name"].split()[0].lower()
+        if len(first_name) > 3 and first_name in lower and key not in mentioned:
+            mentioned.append(key)
+
+    return mentioned[0] if mentioned else None
 
 
 def _build_group_context(conversation_history: list) -> str:
@@ -31,7 +80,7 @@ def _build_group_context(conversation_history: list) -> str:
 
 
 def get_ai_response(persona_key: str, conversation_history: list, user_message: str, api_key: str) -> str:
-    """Get a single persona response (legacy endpoint)."""
+    """Get a single persona response (individual chat endpoint)."""
     persona = PERSONAS.get(persona_key)
     if not persona:
         return "I don't recognize that persona."
@@ -47,7 +96,7 @@ def get_ai_response(persona_key: str, conversation_history: list, user_message: 
 
     messages.append(HumanMessage(content=user_message))
     response = llm.invoke(messages)
-    return response.content
+    return _clean_response(response.content, persona["name"])
 
 
 async def get_group_responses(
@@ -90,7 +139,7 @@ async def get_group_responses(
 
         try:
             response = await asyncio.to_thread(llm.invoke, messages)
-            reply = response.content
+            reply = _clean_response(response.content, persona["name"])
         except Exception as e:
             reply = f"[Could not respond: {str(e)[:100]}]"
 
@@ -116,22 +165,23 @@ async def get_group_responses(
 
     for key in debate_personas:
         persona = PERSONAS[key]
-        others_said = "\n".join(
-            f"[{PERSONAS[k]['name']}]: {resp}"
+
+        # Build what others said (excluding this persona)
+        others = [
+            f"- {PERSONAS[k]['name']}: \"{resp}\""
             for k, resp in initial_responses.items()
             if k != key
-        )
+        ]
+        others_said = "\n".join(others)
 
-        debate_prompt = f"""The group just discussed this. Here's what everyone said:
+        debate_prompt = f"""This is a group chat. Everyone just shared their views on: "{effective_user_message}"
 
+What others said:
 {others_said}
 
-The user's original message was: "{effective_user_message}"
-
-Now react BRIEFLY (1-2 sentences max) to what the other personas said. 
-Agree, disagree, challenge, or build on someone's point. Be specific — name who you're responding to.
-Don't repeat what you already said. Add something NEW to the discussion.
-If you genuinely have nothing to add, just say something short and move on."""
+You already spoke. Now jump back in with a QUICK reaction (1-2 sentences). 
+Pick one thing someone else said that you agree with, disagree with, or want to push further. 
+Write ONLY your reaction — nothing else. No introductions, no labels, no meta-commentary."""
 
         system_content = persona["system_prompt"]
         if context:
@@ -144,12 +194,15 @@ If you genuinely have nothing to add, just say something short and move on."""
 
         try:
             response = await asyncio.to_thread(llm.invoke, messages)
-            reply = response.content
+            reply = _clean_response(response.content, persona["name"])
         except Exception as e:
             reply = f"[Could not respond: {str(e)[:100]}]"
 
-        # Find a persona to "reply to" — pick one this persona is most likely reacting to
-        reply_to_key = random.choice([k for k in persona_keys if k != key])
+        # Detect which persona is being replied to from actual content
+        reply_to_key = _detect_reply_target(reply, key)
+        if not reply_to_key:
+            # Fallback: pick a random other persona
+            reply_to_key = random.choice([k for k in persona_keys if k != key])
 
         yield {
             "type": "debate_reply",
@@ -160,6 +213,7 @@ If you genuinely have nothing to add, just say something short and move on."""
             "reply": reply,
             "reply_to_key": reply_to_key,
             "reply_to_name": PERSONAS[reply_to_key]["name"],
+            "reply_to_content": initial_responses.get(reply_to_key, ""),
         }
 
         context += f"\n[{persona['name']}]: {reply}"

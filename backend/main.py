@@ -180,6 +180,8 @@ async def group_chat(request_body: GroupChatRequest, request: Request, db: Sessi
         from database import SessionLocal
         gen_db = SessionLocal()
 
+        persona_key_to_msg_id = {}
+
         try:
             async for response in get_group_responses(
                 conversation_history=history,
@@ -188,19 +190,29 @@ async def group_chat(request_body: GroupChatRequest, request: Request, db: Sessi
                 reply_to_content=reply_to_content,
                 reply_to_persona=reply_to_persona,
             ):
+                # Determine reply_to_id
+                reply_to_id = None
+                if response["type"] == "persona_reply":
+                    reply_to_id = user_msg_id
+                elif response["type"] == "debate_reply" and response.get("reply_to_key"):
+                    reply_to_id = persona_key_to_msg_id.get(response["reply_to_key"])
+
                 # Save persona message to DB using the generator's own session
                 persona_msg = GroupMessage(
                     conversation_id=conversation_id,
                     role="assistant",
                     persona_key=response["persona_key"],
                     content=response["reply"],
-                    reply_to_id=user_msg_id if response["type"] == "persona_reply" else None,
+                    reply_to_id=reply_to_id,
                 )
                 gen_db.add(persona_msg)
                 gen_db.commit()
                 gen_db.refresh(persona_msg)
 
+                # Store this message's ID so subsequent debate replies can reference it
+                persona_key_to_msg_id[response["persona_key"]] = persona_msg.id
                 response["message_id"] = persona_msg.id
+                response["reply_to_id"] = reply_to_id
 
                 yield {
                     "event": response["type"],

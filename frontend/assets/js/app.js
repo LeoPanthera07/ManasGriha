@@ -361,8 +361,11 @@ function handleSSEEvent(eventType, data) {
       avatar: data.avatar,
       color: data.color,
       content: data.reply,
+      reply_to_id: data.reply_to_id || null,
       reply_to_key: data.reply_to_key || null,
       reply_to_name: data.reply_to_name || null,
+      _reply_to_name: data.reply_to_name || null,
+      _reply_to_content: data.reply_to_content || null,
     };
     state.messages.push(msg);
     renderMessage(msg);
@@ -480,7 +483,7 @@ function renderMessage(msg, animate = true) {
   if (msg.reply_to_id || msg._reply_to_content) {
     const replyName = msg._reply_to_name || getMessageAuthor(msg.reply_to_id);
     const replyContent = msg._reply_to_content || getMessageContent(msg.reply_to_id);
-    const replyColor = msg.color || 'var(--accent)';
+    const replyColor = getPersonaColorByName(replyName);
     if (replyContent) {
       replyHTML = `
         <div class="msg-reply-badge" style="border-color:${replyColor}">
@@ -488,10 +491,9 @@ function renderMessage(msg, animate = true) {
           <div class="reply-text">${escapeHtml(truncate(replyContent, 120))}</div>
         </div>`;
     }
-  }
-  // Debate reply referencing another persona
-  if (msg.reply_to_name && !msg.reply_to_id) {
-    const refColor = getPersonaColor(msg.reply_to_key);
+  } else if (msg.reply_to_name) {
+    // Debate reply referencing another persona
+    const refColor = getPersonaColorByName(msg.reply_to_name);
     replyHTML = `
       <div class="msg-reply-badge" style="border-color:${refColor}">
         <div class="reply-author" style="color:${refColor}">${msg.reply_to_name}</div>
@@ -652,7 +654,7 @@ function getPersonaColor(key) {
 }
 
 function getPersonaColorByName(name) {
-  if (name === 'You') return 'var(--accent)';
+  if (name === 'You' || name === 'User' || !name) return 'var(--accent)';
   return state.personas.find(p => p.name === name)?.color || 'var(--accent)';
 }
 
